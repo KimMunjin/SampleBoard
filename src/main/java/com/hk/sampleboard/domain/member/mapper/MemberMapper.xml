@@ -1,0 +1,41 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hk.board.domain.member.repository.MemberMapper">
+
+    <insert id="registMember" parameterType="Member">
+        INSERT INTO members (
+            email,
+            password,
+            nickname,
+            role
+        ) VALUES (
+                     #{email},
+                     #{password},
+                     #{nickname},
+                     #{role}
+                 )
+    </insert>
+
+    <select id="findByEmail" resultType="Member">
+        SELECT * FROM members
+        WHERE email = #{email}
+    </select>
+
+    <select id="findByNickname" resultType="Member">
+        SELECT * FROM members
+        WHERE nickname = #{nickname}
+    </select>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</mapper>
