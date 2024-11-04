@@ -9,13 +9,10 @@ import java.util.Optional;
 public interface MemberMapper {
     
     //회원 가입
-    Optional<Member> registMember(Member member);
+    int registMember(Member member);
     
     //email로 회원 검색
     Optional<Member> findByEmail(String email);
-
-    //memberId로 회원 검색
-    Optional<Member> findBymemberId(Long memberId);
 
     //nickname으로 회원 검색
     Optional<Member> findByNickname(String nickname);
