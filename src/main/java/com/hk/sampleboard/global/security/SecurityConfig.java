@@ -24,7 +24,13 @@ public class SecurityConfig {
         return http.httpBasic(httpBasic->httpBasic.disable())
                 .csrf(csrf->csrf.disable()) //사용자가 csrf 토큰을 제출하면 서버는 제출된 csrf 토큰을 검증하여 신뢰성 확인
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //session 방식이 아닌 restApi 방식이기 때문에 STATELESS
-                .authorizeHttpRequests(auth->auth.requestMatchers("/member/regist","/member/login").permitAll()) // /member/regist와 /member/login은 토큰 없어도 접근 가능
+                .authorizeHttpRequests(auth->
+                        auth
+                                .requestMatchers("/member/regist").permitAll()
+                                .requestMatchers("/member/login").permitAll()
+                                .requestMatchers("/member/login/reissue").permitAll()
+                                .anyRequest().authenticated()
+                )
                 .addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
                 //권한 설정 hasRole()은 @EnableMethodSecurity를 통해 어노테이션으로 처리

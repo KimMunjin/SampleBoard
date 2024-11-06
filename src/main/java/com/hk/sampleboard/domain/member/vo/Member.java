@@ -21,5 +21,14 @@ public class Member {
     private LocalDateTime updatedAt;
     private LocalDateTime lastLoginAt;
 
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+        this.updatedAt = LocalDateTime.now();
+    }
 
 }

@@ -1,5 +1,6 @@
 package com.hk.sampleboard.global.security;
 
+import com.hk.sampleboard.global.redis.token.repository.TokenRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,15 +22,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     public static final String TOKEN_HEADER = "Authorization";
 
     private final TokenProvider tokenProvider;
+    private final SecurityService securityService;
+    private final TokenRepository tokenRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = this.resolveTokenFromRequest(request);
 
-        if(StringUtils.hasText(token)&&this.tokenProvider.validateToken(token)) {
-            Authentication auth = this.tokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(auth);
+        if(StringUtils.hasText(token)) {
+            //토큰이 blacklist에 있는지 확인
+            String jti = tokenProvider.getTokenJti(token);
+            if(tokenRepository.existsBlackListAccessToken(token)) {
+                //blacklist에 있으면 로그아웃 된 토큰이니 인증 거부
+                filterChain.doFilter(request, response);
+                return;
+            }
+            //유효한 토큰이면 인증 처리
+            if(StringUtils.hasText(token)&&this.tokenProvider.validateToken(token)) {
+                String email = tokenProvider.getEmail(token);
+                Authentication auth = securityService.getAuthentication(email);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
         }
         filterChain.doFilter(request, response);
     }

@@ -8,7 +8,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-public class RegistMemberDTO {
+public class RegistMemberDto {
 
     @Getter
     @Setter
@@ -26,7 +26,7 @@ public class RegistMemberDTO {
         @NotBlank(message = "닉네임은 필수 입력 사항입니다.")
         private String nickname;
 
-        public static Member toVo (RegistMemberDTO.Request request) {
+        public static Member toVo (RegistMemberDto.Request request) {
             return Member.builder()
                     .email(request.email)
                     .password(request.password)
@@ -45,11 +45,13 @@ public class RegistMemberDTO {
     public static class Response {
         private String email;
         private String nickname;
+        private String message;
 
-        public static RegistMemberDTO.Response createRegistResponse(Member member) {
-            return RegistMemberDTO.Response.builder()
+        public static RegistMemberDto.Response createRegistResponse(Member member) {
+            return Response.builder()
                     .email(member.getEmail())
                     .nickname(member.getNickname())
+                    .message("회원가입성공")
                     .build();
         }
     }
