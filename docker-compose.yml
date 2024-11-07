@@ -1,0 +1,33 @@
+version: '3.7'
+services:
+  redis:
+    image: redis
+    container_name: sampleboard_redis
+    command: redis-server --port 6379
+    hostname: redis
+    ports:
+      - 6379:6379
+    restart: always
+
+  postgres:
+    container_name: sampleboard_postgresql
+    image: postgres:17
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: "kim"
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: "sampleboard"
+    volumes:
+      - ${PWD}/postgres-data:/var/lib/postgresql/data
+    restart: always
+
+
+
+volumes:
+  postgres_data:
+
+networks:
+  backend:
+    name: backend
+    driver: bridge
