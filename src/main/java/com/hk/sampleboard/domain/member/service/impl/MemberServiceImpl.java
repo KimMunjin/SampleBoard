@@ -5,9 +5,12 @@ import com.hk.sampleboard.domain.member.mapper.MemberMapper;
 import com.hk.sampleboard.domain.member.service.MemberService;
 import com.hk.sampleboard.domain.member.vo.Member;
 import com.hk.sampleboard.global.constant.TokenConstant;
+import com.hk.sampleboard.global.exception.ErrorCode;
+import com.hk.sampleboard.global.exception.MemberException;
 import com.hk.sampleboard.global.redis.token.repository.TokenRepository;
 import com.hk.sampleboard.global.security.TokenProvider;
 import com.hk.sampleboard.global.type.Role;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -36,12 +39,12 @@ public class MemberServiceImpl implements MemberService {
         boolean existEmail = existEmail(request.getEmail());
         if(existEmail) {
             //임시 에러
-            throw new RuntimeException("Email already exists");
+            throw new MemberException(ErrorCode.EMAIL_ALREADY_EXIST);
         }
 
         boolean existNickname = existNickname(request.getNickname());
         if(existNickname) {
-            throw new RuntimeException("Nickname already exists");
+            throw new MemberException(ErrorCode.NICKNAME_ALREADY_EXIST);
         }
 
         Member member = Member.builder()
@@ -63,7 +66,7 @@ public class MemberServiceImpl implements MemberService {
     public MemberResponse loginMember(LoginMemberDto.Request request) {
         MemberDto memberDTO = (MemberDto) userDetailsService.loadUserByUsername(request.getEmail());
         if(!passwordEncoder.matches(request.getPassword(), memberDTO.getPassword())) {
-            throw new RuntimeException("Wrong password");
+            throw new MemberException(ErrorCode.INVALID_EMAIL_PASSWORD);
         }
 
         return MemberResponse.fromDto(memberDTO);
@@ -92,12 +95,12 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public UpdateMemberDto.Response updateMember(UpdateMemberDto.Request request) {
         Member member = memberMapper.findById(request.getMemberId())
-                .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다."));
+                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUNT));
 
         // 닉네임 중복 체크
         if (request.getNickname() != null && !request.getNickname().equals(member.getNickname())) {
             if (existNickname(request.getNickname())) {
-                throw new RuntimeException("이미 사용중인 닉네임입니다.");
+                throw new MemberException(ErrorCode.NICKNAME_ALREADY_EXIST);
             }
             member.updateNickname(request.getNickname());
         }
@@ -115,11 +118,11 @@ public class MemberServiceImpl implements MemberService {
     public DeleteMemberDto.Response deleteMember(DeleteMemberDto.Request request, String accessToken) {
         // 회원 조회
         Member member = memberMapper.findById(request.getMemberId())
-                .orElseThrow(() -> new RuntimeException("회원을 찾을 수 없습니다."));
+                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUNT));
 
         // 비밀번호 확인
         if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+            throw new MemberException(ErrorCode.INVALID_EMAIL_PASSWORD);
         }
 
         // Redis에서 RefreshToken 삭제
@@ -127,7 +130,7 @@ public class MemberServiceImpl implements MemberService {
 
         // AccessToken BlackList 추가 처리는 로그아웃과 동일
         if (!result) {
-            throw new RuntimeException(TokenConstant.LOGOUT_NOT_SUCCESSFUL);
+            throw new MemberException(ErrorCode.LOGOUT_NOT_SUCCESSFUL);
         }
         String resolvedToken = tokenProvider.resolveTokenFromRequest(accessToken);
         String jti = tokenProvider.getTokenJti(resolvedToken);  // 여기서 jti 추출
@@ -142,7 +145,7 @@ public class MemberServiceImpl implements MemberService {
             response.setMessage("회원 탈퇴 완료");
             return response;
         } else {
-            throw new RuntimeException("회원 탈퇴 실패");
+            throw new MemberException(ErrorCode.FAIL_DELETE_MEMBER);
         }
     }
 
