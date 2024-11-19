@@ -49,6 +49,7 @@
         UPDATE members
         SET nickname = #{nickname},
             password = #{password},
+            last_login_at=#{lastLoginAt},
             updated_at = #{updatedAt}
         WHERE member_id = #{memberId}
     </update>

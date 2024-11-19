@@ -3,6 +3,8 @@ package com.hk.sampleboard.domain.member.service.impl;
 import com.hk.sampleboard.domain.member.dto.RegistMemberDto;
 import com.hk.sampleboard.domain.member.mapper.MemberMapper;
 import com.hk.sampleboard.domain.member.vo.Member;
+import com.hk.sampleboard.global.exception.ErrorCode;
+import com.hk.sampleboard.global.exception.MemberException;
 import com.hk.sampleboard.global.type.Role;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -14,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,7 +44,7 @@ class MemberServiceImplTest {
     @DisplayName("회원가입")
     class registMember {
         @Test
-        @DisplayName("회원가입 성공")
+        @DisplayName("성공")
         void registMemberSuccess() {
             String email = "test@test.com";
             String password = "aaa1234";
@@ -69,7 +72,47 @@ class MemberServiceImplTest {
             assertThat(response.getEmail()).isEqualTo(member.getEmail());
             assertThat(response.getNickname()).isEqualTo(member.getNickname());
             assertEquals("회원가입성공", response.getMessage());
-            verify(memberMapper, times(1)).save(any(Member.class));
+            verify(memberMapper, times(1)).save(member);
+        }
+        @Test
+        @DisplayName("실패 - 이메일 중복")
+        void registMemberFailEmail() {
+            String email = "test@test.com";
+            String password = "aaa1234";
+            String nickname = "testNickname";
+
+            RegistMemberDto.Request request = RegistMemberDto.Request.builder()
+                    .email(email)
+                    .password(password)
+                    .nickname(nickname)
+                    .build();
+
+            when(memberMapper.existEmail(email)).thenReturn(true);
+
+            MemberException memberException = catchThrowableOfType(()->memberService.registMember(request),MemberException.class);
+
+            assertEquals(ErrorCode.EMAIL_ALREADY_EXIST, memberException.getErrorCode());
+            verify(memberMapper, never()).save(any(Member.class));
+        }
+        @Test
+        @DisplayName("살패 - 닉네임 중복")
+        void registMemberFailNickname() {
+            String email = "test@test.com";
+            String password = "aaa1234";
+            String nickname = "testNickname";
+
+            RegistMemberDto.Request request = RegistMemberDto.Request.builder()
+                    .email(email)
+                    .password(password)
+                    .nickname(nickname)
+                    .build();
+            when(memberMapper.existEmail(email)).thenReturn(false);
+            when(memberMapper.existNickname(nickname)).thenReturn(true);
+
+            MemberException memberException = catchThrowableOfType(()->memberService.registMember(request),MemberException.class);
+
+            assertEquals(ErrorCode.NICKNAME_ALREADY_EXIST, memberException.getErrorCode());
+            verify(memberMapper, never()).save(any(Member.class));
         }
     }
 }

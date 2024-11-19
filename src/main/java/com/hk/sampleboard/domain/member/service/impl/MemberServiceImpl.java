@@ -29,7 +29,7 @@ public class MemberServiceImpl implements MemberService {
     private final UserDetailsService userDetailsService;
 
     /**
-     *
+     * 회원가입
      * @param request
      * @return
      */
@@ -38,7 +38,6 @@ public class MemberServiceImpl implements MemberService {
         //중복 체크 메서드들(email, 닉네임)
         boolean existEmail = existEmail(request.getEmail());
         if(existEmail) {
-            //임시 에러
             throw new MemberException(ErrorCode.EMAIL_ALREADY_EXIST);
         }
 
@@ -69,11 +68,16 @@ public class MemberServiceImpl implements MemberService {
             throw new MemberException(ErrorCode.INVALID_EMAIL_PASSWORD);
         }
 
+        Member member = memberMapper.findByEmail(request.getEmail())
+                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUNT));
+        member.updateLastLoginAt();
+        memberMapper.update(member);
+        memberDTO.setLastLoginAt(member.getLastLoginAt());
         return MemberResponse.fromDto(memberDTO);
     }
 
     /**
-     * 로그아웃 ServiceImpl
+     * 로그아웃
      * @param accessToken
      * @param email
      * @return
@@ -92,6 +96,11 @@ public class MemberServiceImpl implements MemberService {
         return TokenConstant.LOGOUT_SUCCESSFUL;
     }
 
+    /**
+     * 회원정보 수정
+     * @param request
+     * @return
+     */
     @Override
     public UpdateMemberDto.Response updateMember(UpdateMemberDto.Request request) {
         Member member = memberMapper.findById(request.getMemberId())
@@ -114,6 +123,12 @@ public class MemberServiceImpl implements MemberService {
         return UpdateMemberDto.Response.from(member);
     }
 
+    /**
+     * 회원 탈퇴
+     * @param request
+     * @param accessToken
+     * @return
+     */
     @Override
     public DeleteMemberDto.Response deleteMember(DeleteMemberDto.Request request, String accessToken) {
         // 회원 조회

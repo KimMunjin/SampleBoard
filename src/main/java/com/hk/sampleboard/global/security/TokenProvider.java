@@ -1,8 +1,11 @@
 package com.hk.sampleboard.global.security;
 
 import com.hk.sampleboard.domain.member.dto.TokenDto;
+import com.hk.sampleboard.domain.member.mapper.MemberMapper;
+import com.hk.sampleboard.domain.member.vo.Member;
 import com.hk.sampleboard.global.constant.TokenConstant;
 import com.hk.sampleboard.global.exception.ErrorCode;
+import com.hk.sampleboard.global.exception.MemberException;
 import com.hk.sampleboard.global.redis.token.repository.TokenRepository;
 import com.hk.sampleboard.global.type.Role;
 import io.jsonwebtoken.*;
@@ -10,10 +13,6 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +25,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TokenProvider {
 
+    private final MemberMapper memberMapper;
     private Key key;
 
-    private final UserDetailsService userDetailsService;
     private final TokenRepository refreshTokenRepository;
 
     @Value("${spring.jwt.secret}")
@@ -65,6 +64,9 @@ public class TokenProvider {
         Claims claims = parseClaims(refreshToken);
 
         String email = claims.getSubject();
+        Member member = memberMapper.findByEmail(email)
+                .orElseThrow(() -> new JwtException(ErrorCode.MEMBER_NOT_FOUNT.getDescription()));
+
         Role role = Role.valueOf(claims.get(TokenConstant.KEY_ROLES, String.class));
 
         String findToken = refreshTokenRepository.getToken(email);
@@ -73,12 +75,10 @@ public class TokenProvider {
             throw new JwtException(ErrorCode.JWT_REFRESH_TOKEN_NOT_FOUND.getDescription());
         }
 
-        return saveTokenInRedis(email,role);
-
-
+        return saveTokenInRedis(email,role,member.getMemberId());
     }
 
-    public TokenDto saveTokenInRedis(String email, Role role){
+    public TokenDto saveTokenInRedis(String email, Role role, Long memberId) {
         String accessToken = generateToken(email, role, TokenConstant.ACCESS_TOKEN_VALID_TIME);
 
         String refreshToken = generateToken(email, role, TokenConstant.REFRESH_TOKEN_VALID_TIME);
@@ -86,6 +86,7 @@ public class TokenProvider {
         refreshTokenRepository.saveToken(refreshToken, email);
 
         return TokenDto.builder()
+                .memberId(memberId)
                 .tokenType(TokenConstant.BEARER)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)

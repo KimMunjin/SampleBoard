@@ -3,6 +3,8 @@ package com.hk.sampleboard.domain.member.controller;
 import com.hk.sampleboard.domain.member.dto.*;
 import com.hk.sampleboard.domain.member.service.CookieService;
 import com.hk.sampleboard.domain.member.service.MemberService;
+import com.hk.sampleboard.global.exception.ErrorCode;
+import com.hk.sampleboard.global.exception.MemberException;
 import com.hk.sampleboard.global.security.TokenProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,33 +26,51 @@ public class MemberController {
     private final TokenProvider tokenProvider;
     private final CookieService cookieService;
 
+    /**
+     * 회원가입
+     * @param request
+     * @return
+     */
     @PostMapping("/regist")
     @Operation(summary = "회원 가입",description = "회원 가입 메서드")
     public ResponseEntity<RegistMemberDto.Response> registMember(
             @RequestBody @Valid RegistMemberDto.Request request
     ) {
+        log.info("회원가입 요청 : email ={}",request.getEmail());
         RegistMemberDto.Response response = memberService.registMember(request);
+        log.info("회원가입 완료 : email = {}",response.getEmail());
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 로그인
+     * @param request
+     * @param httpServletResponse
+     * @return
+     */
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "로그인 후 토큰 발급")
     public ResponseEntity<LoginMemberDto.Response> loginMember(
             @RequestBody @Valid LoginMemberDto.Request request
             , HttpServletResponse httpServletResponse){
+        log.info("로그인 요청 : email ={}",request.getEmail());
         MemberResponse memberResponse = memberService.loginMember(request);
 
-        TokenDto tokenDto = tokenProvider.saveTokenInRedis(memberResponse.getEmail(),memberResponse.getRole());
+        TokenDto tokenDto = tokenProvider.saveTokenInRedis(memberResponse.getEmail(),memberResponse.getRole(),memberResponse.getMemberId());
         cookieService.setCookieForLogin(httpServletResponse, tokenDto.getAccessToken());
+        log.info("로그인 성공 : memberId ={}, email = {}",memberResponse.getMemberId(), memberResponse.getEmail());
         return ResponseEntity.ok(LoginMemberDto.Response.builder()
                         .memberResponse(memberResponse)
                         .tokenDto(tokenDto)
                         .build());
     }
-
+    
     /**
-     * 토큰 재발급  access token이 만료될 때에, refresh token을 확인하고,
-     * access token과 refresh token을 재발급해준다
+     * 토큰 재발급
+     * access token이 만료될 때에, refresh token을 확인하고, access token과 refresh token을 재발급해준다
+     * @param refreshToken
+     * @param response
+     * @return
      */
     @PostMapping("/login/reissue")
     @Operation(summary = "Access token 재발급하기", description = "refresh token 확인 후, Access token 재발급하기")
@@ -61,7 +81,7 @@ public class MemberController {
         refreshToken = tokenProvider.resolveTokenFromRequest(refreshToken);
         TokenDto tokenDto = tokenProvider.regenerateToken(refreshToken);
         cookieService.setCookieForLogin(response, tokenDto.getAccessToken());
-
+        log.info("토큰 재발급 : memberId = {}",tokenDto.getMemberId());
         return ResponseEntity.ok(tokenDto);
     }
 
@@ -76,13 +96,20 @@ public class MemberController {
             @RequestHeader("Authorization") String accessToken,
             HttpServletResponse httpServletResponse
     ) {
+        log.info("로그아웃 요청 : memberId = {}", memberDto.getMemberId());
         String token = tokenProvider.resolveTokenFromRequest(accessToken);
 
         cookieService.expireCookieForLogout(httpServletResponse);
-
+        log.info("로그아웃 완료 : memberId = {}", memberDto.getMemberId());
         return ResponseEntity.ok(memberService.logoutMember(token, memberDto.getEmail()));
     }
 
+    /**
+     * 회원 정보 수정
+     * @param request
+     * @param memberDto
+     * @return
+     */
     @PostMapping("/update")
     @Operation(summary = "회원 정보 수정", description = "닉네임과 비밀번호를 수정할 수 있습니다.")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
@@ -92,7 +119,7 @@ public class MemberController {
     ) {
         // 본인 확인
         if (!memberDto.getMemberId().equals(request.getMemberId())) {
-            throw new RuntimeException("본인의 정보만 수정할 수 있습니다.");
+            throw new MemberException(ErrorCode.NO_AUTHORITY_ERROR);
         }
 
         return ResponseEntity.ok(memberService.updateMember(request));
@@ -108,7 +135,7 @@ public class MemberController {
     ) {
         // 본인 확인
         if (!memberDto.getMemberId().equals(request.getMemberId())) {
-            throw new RuntimeException("본인만 탈퇴할 수 있습니다.");
+            throw new MemberException(ErrorCode.NO_AUTHORITY_ERROR);
         }
 
         return ResponseEntity.ok(memberService.deleteMember(request, accessToken));

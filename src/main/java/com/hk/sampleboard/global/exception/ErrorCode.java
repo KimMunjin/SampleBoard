@@ -18,6 +18,7 @@ public enum ErrorCode {
     INVALID_EMAIL_PASSWORD(HttpStatus.BAD_REQUEST,"잘못된 이메일 혹은 비밀번호입니다."),
     LOGOUT_NOT_SUCCESSFUL(HttpStatus.BAD_REQUEST,"로그아웃 과정에서 문제가 발생했습니다."),
     FAIL_DELETE_MEMBER(HttpStatus.BAD_REQUEST,"회원 탈퇴 실패"),
+    NO_AUTHORITY_ERROR(HttpStatus.FORBIDDEN,"권한이 없습니다."),
 
     //토큰 관련
     JWT_TOKEN_ERROR(HttpStatus.UNAUTHORIZED, "JWT 토큰 에러입니다."),

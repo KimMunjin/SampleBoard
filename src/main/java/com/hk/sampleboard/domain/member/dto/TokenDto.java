@@ -8,6 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class TokenDto {
+    private Long memberId;
     private String accessToken;
     private String refreshToken;
     private String tokenType;

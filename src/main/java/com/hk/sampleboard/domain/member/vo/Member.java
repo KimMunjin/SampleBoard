@@ -19,6 +19,8 @@ public class Member {
     private String nickname;
     private Role role;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime lastLoginAt;
 
     @Override
     public boolean equals(Object o) {
@@ -33,8 +35,6 @@ public class Member {
         return Objects.hash(memberId, email, password, nickname, role);
     }
 
-    private LocalDateTime updatedAt;
-    private LocalDateTime lastLoginAt;
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
@@ -44,6 +44,10 @@ public class Member {
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
     }
 
 }

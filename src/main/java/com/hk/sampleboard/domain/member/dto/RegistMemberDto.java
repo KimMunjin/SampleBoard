@@ -43,12 +43,14 @@ public class RegistMemberDto {
     @AllArgsConstructor
     @Builder
     public static class Response {
+        private Long memberId;
         private String email;
         private String nickname;
         private String message;
 
         public static RegistMemberDto.Response createRegistResponse(Member member) {
             return Response.builder()
+                    .memberId(member.getMemberId())
                     .email(member.getEmail())
                     .nickname(member.getNickname())
                     .message("회원가입성공")
