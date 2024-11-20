@@ -55,7 +55,7 @@ class MemberServiceImplTest {
     @DisplayName("회원가입")
     class registMember {
         @Test
-        @DisplayName("성공")
+        @DisplayName("회원가입 성공")
         void registMemberSuccess() {
             String email = "test@test.com";
             String password = "aaa1234";
@@ -86,7 +86,7 @@ class MemberServiceImplTest {
             verify(memberMapper, times(1)).save(member);
         }
         @Test
-        @DisplayName("실패 - 이메일 중복")
+        @DisplayName("회원가입 실패 - 이메일 중복")
         void registMemberFailEmail() {
             String email = "test@test.com";
             String password = "aaa1234";
@@ -106,7 +106,7 @@ class MemberServiceImplTest {
             verify(memberMapper, never()).save(any(Member.class));
         }
         @Test
-        @DisplayName("살패 - 닉네임 중복")
+        @DisplayName("회원가입 실패 - 닉네임 중복")
         void registMemberFailNickname() {
             String email = "test@test.com";
             String password = "aaa1234";
