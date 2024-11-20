@@ -29,9 +29,8 @@ Controller - Service - ServiceImpl - Mapper
 - Redis와 PostgreSQL은 **Docker** 컨테이너로 구현
 
 ## 차후 계획
-
-1. 초기 목표였던 게시판 기능 완성
-2. **GlobalExceptionHandler** 완성
-3. **Mockito**를 활용한 `ServiceImpl` 테스트 코드 작성
-4. 구체적인 주석 추가
-5. 필요한 부분 리팩토링 작업
+- [ ] 초기 목표였던 게시판 기능 완성 
+- [x] **GlobalExceptionHandler** 완성
+- [ ] **Mockito**를 활용한 `ServiceImpl` 테스트 코드 작성
+- [ ] 구체적인 주석 추가
+- [ ]  필요한 부분 리팩토링 작업
