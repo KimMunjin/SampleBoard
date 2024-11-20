@@ -8,6 +8,8 @@ services:
     ports:
       - 6379:6379
     restart: always
+    networks:
+      - backend
 
   postgres:
     container_name: sampleboard_postgresql
@@ -19,13 +21,16 @@ services:
       POSTGRES_PASSWORD: "1234"
       POSTGRES_DB: "sampleboard"
     volumes:
-      - ${PWD}/postgres-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     restart: always
+    networks:
+      - backend
 
 
 
 volumes:
   postgres_data:
+    name: sampleboard_postgres_data
 
 networks:
   backend:
