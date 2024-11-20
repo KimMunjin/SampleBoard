@@ -1,10 +1,14 @@
 package com.hk.sampleboard.domain.member.service.impl;
 
+import com.hk.sampleboard.domain.member.dto.LoginMemberDto;
+import com.hk.sampleboard.domain.member.dto.MemberDto;
+import com.hk.sampleboard.domain.member.dto.MemberResponse;
 import com.hk.sampleboard.domain.member.dto.RegistMemberDto;
 import com.hk.sampleboard.domain.member.mapper.MemberMapper;
 import com.hk.sampleboard.domain.member.vo.Member;
 import com.hk.sampleboard.global.exception.ErrorCode;
 import com.hk.sampleboard.global.exception.MemberException;
+import com.hk.sampleboard.global.security.SecurityService;
 import com.hk.sampleboard.global.type.Role;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,7 +17,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -28,8 +36,11 @@ class MemberServiceImplTest {
     private MemberMapper memberMapper;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private SecurityService securityService;
     @InjectMocks
     private MemberServiceImpl memberService;
+
 
     private static Member member(String email, String password, String nickname, Role role) {
         return Member.builder()
@@ -113,6 +124,122 @@ class MemberServiceImplTest {
 
             assertEquals(ErrorCode.NICKNAME_ALREADY_EXIST, memberException.getErrorCode());
             verify(memberMapper, never()).save(any(Member.class));
+        }
+    }
+    @Nested
+    @DisplayName("로그인")
+    class loginMember {
+        @Test
+        @DisplayName("로그인 성공")
+        void loginMemberSuccess() {
+            // given
+            String email = "test@test.com";
+            String rawPassword = "password123";
+            String encodedPassword = "encodedPassword";
+            String nickname = "nickname";
+
+            LoginMemberDto.Request request = LoginMemberDto.Request.builder()
+                    .email(email)
+                    .password(rawPassword)
+                    .build();
+
+            Member member = member(email, encodedPassword, nickname, Role.USER);  // 헬퍼 메서드 사용
+            MemberDto memberDto = MemberDto.fromVo(member);
+
+            when(securityService.loadUserByUsername(email)).thenReturn(memberDto);
+            when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(true);
+            when(memberMapper.findByEmail(email)).thenReturn(Optional.of(member));
+            when(memberMapper.update(any(Member.class))).thenReturn(1);
+
+            // when
+            MemberResponse response = memberService.loginMember(request);
+
+            // then
+            assertNotNull(response);
+            assertEquals(email, response.getEmail());
+            assertNotNull(member.getLastLoginAt());
+            verify(memberMapper).update(argThat(updatedMember ->
+                    updatedMember.getLastLoginAt() != null));
+        }
+
+        @Test
+        @DisplayName("로그인 실패 - 존재하지 않는 이메일")
+        void loginMemberFailEmailNotFound() {
+            // given
+            String email = "nonexistent@test.com";
+            String password = "password123";
+
+            LoginMemberDto.Request request = LoginMemberDto.Request.builder()
+                    .email(email)
+                    .password(password)
+                    .build();
+
+            when(securityService.loadUserByUsername(email))
+                    .thenThrow(new UsernameNotFoundException("User not found"));
+
+            // when & then
+            assertThrows(MemberException.class, () ->
+                    memberService.loginMember(request));
+
+            verify(memberMapper, never()).update(any(Member.class));
+        }
+
+        @Test
+        @DisplayName("로그인 실패 - 잘못된 비밀번호")
+        void loginMemberFailInvalidPassword() {
+            // given
+            String email = "test@test.com";
+            String wrongPassword = "wrongPassword";
+            String encodedPassword = "encodedPassword";
+            String nickname = "nickname";
+
+            LoginMemberDto.Request request = LoginMemberDto.Request.builder()
+                    .email(email)
+                    .password(wrongPassword)
+                    .build();
+
+            Member member = member(email, encodedPassword, nickname, Role.USER);
+            MemberDto memberDto = MemberDto.fromVo(member);
+
+
+            when(securityService.loadUserByUsername(email)).thenReturn(memberDto);
+            when(passwordEncoder.matches(wrongPassword, encodedPassword)).thenReturn(false);
+
+            // when & then
+            MemberException exception = assertThrows(MemberException.class, () ->
+                    memberService.loginMember(request));
+
+            assertEquals(ErrorCode.INVALID_EMAIL_PASSWORD, exception.getErrorCode());
+            verify(memberMapper, never()).update(any(Member.class));
+        }
+
+        @Test
+        @DisplayName("로그인 실패 - Member 엔티티 조회 실패")
+        void loginMemberFailMemberNotFound() {
+            // given
+            String email = "test@test.com";
+            String password = "password123";
+            String encodedPassword = "encodedPassword";
+            String nickname = "nickname";
+
+            LoginMemberDto.Request request = LoginMemberDto.Request.builder()
+                    .email(email)
+                    .password(password)
+                    .build();
+
+            Member member = member(email, encodedPassword, nickname, Role.USER);
+            MemberDto memberDto = MemberDto.fromVo(member);
+
+            when(securityService.loadUserByUsername(email)).thenReturn(memberDto);
+            when(passwordEncoder.matches(password, encodedPassword)).thenReturn(true);
+            when(memberMapper.findByEmail(email)).thenReturn(Optional.empty());
+
+            // when & then
+            MemberException exception = assertThrows(MemberException.class, () ->
+                    memberService.loginMember(request));
+
+            assertEquals(ErrorCode.MEMBER_NOT_FOUNT, exception.getErrorCode());
+            verify(memberMapper, never()).update(any(Member.class));
         }
     }
 }
