@@ -19,7 +19,7 @@ public class SecurityService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Member member = memberMapper.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("찾을 수 없는 이메일 입니다.: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         return MemberDto.fromVo(member);
     }
 

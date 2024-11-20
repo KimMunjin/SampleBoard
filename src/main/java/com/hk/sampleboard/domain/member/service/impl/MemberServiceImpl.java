@@ -8,12 +8,14 @@ import com.hk.sampleboard.global.constant.TokenConstant;
 import com.hk.sampleboard.global.exception.ErrorCode;
 import com.hk.sampleboard.global.exception.MemberException;
 import com.hk.sampleboard.global.redis.token.repository.TokenRepository;
+import com.hk.sampleboard.global.security.SecurityService;
 import com.hk.sampleboard.global.security.TokenProvider;
 import com.hk.sampleboard.global.type.Role;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,7 +28,7 @@ public class MemberServiceImpl implements MemberService {
     private final PasswordEncoder passwordEncoder;
     private final TokenRepository tokenRepository;
     private final TokenProvider tokenProvider;
-    private final UserDetailsService userDetailsService;
+    private final SecurityService securityService;
 
     /**
      * 회원가입
@@ -63,7 +65,12 @@ public class MemberServiceImpl implements MemberService {
      */
     @Override
     public MemberResponse loginMember(LoginMemberDto.Request request) {
-        MemberDto memberDTO = (MemberDto) userDetailsService.loadUserByUsername(request.getEmail());
+        MemberDto memberDTO;
+        try {
+            memberDTO = (MemberDto) securityService.loadUserByUsername(request.getEmail());
+        } catch (UsernameNotFoundException e) {
+            throw new MemberException(ErrorCode.MEMBER_NOT_FOUNT);
+        }
         if(!passwordEncoder.matches(request.getPassword(), memberDTO.getPassword())) {
             throw new MemberException(ErrorCode.INVALID_EMAIL_PASSWORD);
         }
