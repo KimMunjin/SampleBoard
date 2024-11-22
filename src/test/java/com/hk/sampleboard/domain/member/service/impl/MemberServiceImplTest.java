@@ -178,9 +178,9 @@ class MemberServiceImplTest {
                     .thenThrow(new UsernameNotFoundException("User not found"));
 
             // when & then
-            assertThrows(MemberException.class, () ->
-                    memberService.loginMember(request));
+            MemberException memberException = catchThrowableOfType(()->memberService.loginMember(request),MemberException.class);
 
+            assertEquals(ErrorCode.MEMBER_NOT_FOUNT, memberException.getErrorCode());
             verify(memberMapper, never()).update(any(Member.class));
         }
 
@@ -206,10 +206,9 @@ class MemberServiceImplTest {
             when(passwordEncoder.matches(wrongPassword, encodedPassword)).thenReturn(false);
 
             // when & then
-            MemberException exception = assertThrows(MemberException.class, () ->
-                    memberService.loginMember(request));
+            MemberException memberException = catchThrowableOfType(()->memberService.loginMember(request),MemberException.class);
 
-            assertEquals(ErrorCode.INVALID_EMAIL_PASSWORD, exception.getErrorCode());
+            assertEquals(ErrorCode.INVALID_EMAIL_PASSWORD, memberException.getErrorCode());
             verify(memberMapper, never()).update(any(Member.class));
         }
 
@@ -235,10 +234,9 @@ class MemberServiceImplTest {
             when(memberMapper.findByEmail(email)).thenReturn(Optional.empty());
 
             // when & then
-            MemberException exception = assertThrows(MemberException.class, () ->
-                    memberService.loginMember(request));
+            MemberException memberException = catchThrowableOfType(()->memberService.loginMember(request),MemberException.class);
 
-            assertEquals(ErrorCode.MEMBER_NOT_FOUNT, exception.getErrorCode());
+            assertEquals(ErrorCode.MEMBER_NOT_FOUNT, memberException.getErrorCode());
             verify(memberMapper, never()).update(any(Member.class));
         }
     }
