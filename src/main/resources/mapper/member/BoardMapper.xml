@@ -1,0 +1,20 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hk.sampleboard.domain.board.mapper.BoardMapper">
+    <select id="insertBoard" parameterType="Board" resultType="long">
+            INSERT INTO board (
+            member_id,
+            nickname,
+            title,
+            content
+            ) VALUES (
+            #{memberId},
+            #{nickname},
+            #{title},
+            #{content}
+            ) RETURNING board_id
+    </select>
+
+
+
+
+</mapper>
