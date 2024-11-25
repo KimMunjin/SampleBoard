@@ -55,7 +55,8 @@ public class MemberController {
             , HttpServletResponse httpServletResponse){
         log.info("로그인 요청 : email ={}",request.getEmail());
         MemberResponse memberResponse = memberService.loginMember(request);
-
+        
+        // Token을 생성하여 Redis에 저장
         TokenDto tokenDto = tokenProvider.saveTokenInRedis(memberResponse.getEmail(),memberResponse.getRole(),memberResponse.getMemberId());
         cookieService.setCookieForLogin(httpServletResponse, tokenDto.getAccessToken());
         log.info("로그인 성공 : memberId ={}, email = {}",memberResponse.getMemberId(), memberResponse.getEmail());
@@ -78,7 +79,7 @@ public class MemberController {
             @RequestHeader("RefreshToken") String refreshToken,
             HttpServletResponse response
     ) {
-        refreshToken = tokenProvider.resolveTokenFromRequest(refreshToken);
+
         TokenDto tokenDto = tokenProvider.regenerateToken(refreshToken);
         cookieService.setCookieForLogin(response, tokenDto.getAccessToken());
         log.info("토큰 재발급 : memberId = {}",tokenDto.getMemberId());
