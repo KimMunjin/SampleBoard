@@ -133,6 +133,7 @@ public class MemberController {
             @RequestBody @Valid UpdateMemberDto.Request request,
             @AuthenticationPrincipal MemberDto memberDto
     ) {
+        log.info("회원정보수정 요청 : memberId = {}", request.getMemberId());
         // 본인 확인
         if (!memberDto.getMemberId().equals(request.getMemberId())) {
             throw new MemberException(ErrorCode.NO_AUTHORITY_ERROR);
@@ -158,12 +159,15 @@ public class MemberController {
             @RequestHeader("Authorization") String accessToken,
             @RequestBody @Valid DeleteMemberDto.Request request
     ) {
+        log.info("회원탈퇴 요청 : memberId = {}", request.getMemberId());
         // 본인 확인
         if (!memberDto.getMemberId().equals(request.getMemberId())) {
             throw new MemberException(ErrorCode.NO_AUTHORITY_ERROR);
         }
-
-        return ResponseEntity.ok(memberService.deleteMember(request, accessToken));
+        
+        DeleteMemberDto.Response response = memberService.deleteMember(request, accessToken);
+        log.info("회원탈퇴 완료 : memberId = {}", response.getMemberId());
+        return ResponseEntity.ok(response);
     }
 
 
