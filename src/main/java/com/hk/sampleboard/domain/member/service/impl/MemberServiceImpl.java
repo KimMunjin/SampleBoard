@@ -4,6 +4,7 @@ import com.hk.sampleboard.domain.member.dto.*;
 import com.hk.sampleboard.domain.member.mapper.MemberMapper;
 import com.hk.sampleboard.domain.member.service.MemberService;
 import com.hk.sampleboard.domain.member.vo.Member;
+import com.hk.sampleboard.global.constant.ResponseConstant;
 import com.hk.sampleboard.global.constant.TokenConstant;
 import com.hk.sampleboard.global.exception.ErrorCode;
 import com.hk.sampleboard.global.exception.MemberException;
@@ -11,10 +12,8 @@ import com.hk.sampleboard.global.redis.token.repository.TokenRepository;
 import com.hk.sampleboard.global.security.SecurityService;
 import com.hk.sampleboard.global.security.TokenProvider;
 import com.hk.sampleboard.global.type.Role;
-import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,17 +31,18 @@ public class MemberServiceImpl implements MemberService {
 
     /**
      * 회원가입
+     *
      * @param request
      * @return
      */
     @Override
     public RegistMemberDto.Response registMember(RegistMemberDto.Request request) {
-        //중복 체크 메서드들(email, 닉네임)
+
+        //중복 체크 (email, 닉네임)
         boolean existEmail = existEmail(request.getEmail());
         if(existEmail) {
             throw new MemberException(ErrorCode.EMAIL_ALREADY_EXIST);
         }
-
         boolean existNickname = existNickname(request.getNickname());
         if(existNickname) {
             throw new MemberException(ErrorCode.NICKNAME_ALREADY_EXIST);
@@ -54,12 +54,17 @@ public class MemberServiceImpl implements MemberService {
                 .nickname(request.getNickname())
                 .role(Role.USER)
                 .build();
-        memberMapper.save(member);
-        return RegistMemberDto.Response.createRegistResponse(member);
+
+        Member registerdMember = memberMapper.insertMember(member);
+
+        MemberDto memberDto = MemberDto.fromVo(registerdMember);
+
+        return RegistMemberDto.Response.createRegistResponse(memberDto);
     }
 
     /**
      * 로그인
+     *
      * @param request
      * @return
      */
@@ -69,49 +74,63 @@ public class MemberServiceImpl implements MemberService {
         try {
             memberDTO = (MemberDto) securityService.loadUserByUsername(request.getEmail());
         } catch (UsernameNotFoundException e) {
-            throw new MemberException(ErrorCode.MEMBER_NOT_FOUNT);
+            //UsernameNotFoundException 발생 시 MEMBER_NOT_FOUND 에러로 throw
+            throw new MemberException(ErrorCode.MEMBER_NOT_FOUND);
         }
         if(!passwordEncoder.matches(request.getPassword(), memberDTO.getPassword())) {
             throw new MemberException(ErrorCode.INVALID_EMAIL_PASSWORD);
         }
 
         Member member = memberMapper.findByEmail(request.getEmail())
-                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUNT));
+                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 로그인 시 최종 로그인 시간 업데이트
         member.updateLastLoginAt();
-        memberMapper.update(member);
-        memberDTO.setLastLoginAt(member.getLastLoginAt());
-        return MemberResponse.fromDto(memberDTO);
+        Member updatedMember = memberMapper.updateMember(member);
+
+        MemberDto updatedMemberDto = MemberDto.fromVo(updatedMember);
+        return MemberResponse.fromDto(updatedMemberDto);
     }
 
     /**
      * 로그아웃
-     * @param accessToken
-     * @param email
+     * 
+     * @param request
      * @return
      */
     @Override
-    public String logoutMember(String accessToken, String email) {
-        boolean result = tokenRepository.deleteToken(email);
+    public LogoutMemberDto.Response logoutMember(LogoutMemberDto.Request request) {
+        // refreshToken 삭제
+        boolean result = tokenRepository.deleteToken(request.getEmail());
 
         if (!result) {
-            return TokenConstant.LOGOUT_NOT_SUCCESSFUL;
+            // 토큰 삭제에 실패할 경우 LOGOUT_NOT_SUCCESSFUL;
+            throw new MemberException(ErrorCode.LOGOUT_NOT_SUCCESSFUL);
         }
-        String resolvedToken = tokenProvider.resolveTokenFromRequest(accessToken);
+
+        // AccessToken에서 Bearer 제거
+        String resolvedToken = tokenProvider.resolveTokenFromRequest(request.getToken());
+        
         String jti = tokenProvider.getTokenJti(resolvedToken);  // 여기서 jti 추출
         tokenRepository.addBlackListAccessToken(jti);
+        LogoutMemberDto.Response response = LogoutMemberDto.Response.builder()
+                .memberId(request.getMemberId())
+                .message(TokenConstant.LOGOUT_SUCCESSFUL)
+                .build();
 
-        return TokenConstant.LOGOUT_SUCCESSFUL;
+        return response;
     }
 
     /**
      * 회원정보 수정
+     * 
      * @param request
      * @return
      */
     @Override
     public UpdateMemberDto.Response updateMember(UpdateMemberDto.Request request) {
         Member member = memberMapper.findById(request.getMemberId())
-                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUNT));
+                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 닉네임 중복 체크
         if (request.getNickname() != null && !request.getNickname().equals(member.getNickname())) {
@@ -126,12 +145,14 @@ public class MemberServiceImpl implements MemberService {
             member.updatePassword(passwordEncoder.encode(request.getPassword()));
         }
 
-        memberMapper.update(member);
-        return UpdateMemberDto.Response.from(member);
+        Member updatedMember = memberMapper.updateMember(member);
+        MemberDto updatedMemberDto = MemberDto.fromVo(updatedMember);
+        return UpdateMemberDto.Response.from(updatedMemberDto);
     }
 
     /**
      * 회원 탈퇴
+     *
      * @param request
      * @param accessToken
      * @return
@@ -140,7 +161,7 @@ public class MemberServiceImpl implements MemberService {
     public DeleteMemberDto.Response deleteMember(DeleteMemberDto.Request request, String accessToken) {
         // 회원 조회
         Member member = memberMapper.findById(request.getMemberId())
-                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUNT));
+                .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 비밀번호 확인
         if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
@@ -150,7 +171,7 @@ public class MemberServiceImpl implements MemberService {
         // Redis에서 RefreshToken 삭제
         boolean result = tokenRepository.deleteToken(member.getEmail());
 
-        // AccessToken BlackList 추가 처리는 로그아웃과 동일
+        // AccessToken BlackList 추가! 처리는 로그아웃과 동일
         if (!result) {
             throw new MemberException(ErrorCode.LOGOUT_NOT_SUCCESSFUL);
         }
@@ -164,7 +185,7 @@ public class MemberServiceImpl implements MemberService {
         // 회원 삭제
         int deleteResult = memberMapper.delete(member.getMemberId());
         if(deleteResult>0) {
-            response.setMessage("회원 탈퇴 완료");
+            response.setMessage(ResponseConstant.DELETE_MEMBER_SUCCESS);
             return response;
         } else {
             throw new MemberException(ErrorCode.FAIL_DELETE_MEMBER);
@@ -176,15 +197,10 @@ public class MemberServiceImpl implements MemberService {
     public boolean existEmail (String email) {
         return memberMapper.existEmail(email);
     }
-
+    
+    //닉네임 존재 여부 확인 메서드
     public boolean existNickname (String nickname) {
         return memberMapper.existNickname(nickname);
     }
 
-//    @Override
-//    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-//        Member member = memberRepository.findByEmail(email)
-//                .orElseThrow(() -> new UsernameNotFoundException("찾을 수 없는 이메일 입니다.: " + email));
-//        return MemberDto.fromVo(member);
-//    }
 }

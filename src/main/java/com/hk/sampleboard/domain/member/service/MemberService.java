@@ -7,7 +7,7 @@ public interface MemberService {
 
     MemberResponse loginMember(LoginMemberDto.Request request);
 
-    String logoutMember(String accessToken, String email);
+    LogoutMemberDto.Response logoutMember(LogoutMemberDto.Request request);
 
     UpdateMemberDto.Response updateMember(UpdateMemberDto.Request request);
 

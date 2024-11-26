@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface MemberMapper {
 
     //회원 가입
-    int save(Member member);
+    Member insertMember(Member member);
 
     //email로 회원 검색
     Optional<Member> findByEmail(String email);
@@ -26,7 +26,7 @@ public interface MemberMapper {
     //nickname 존재 여부 확인
     boolean existNickname(String nickname);
 
-    int update(Member member);
+    Member updateMember(Member member);
 
 
     int delete(Long memberId);

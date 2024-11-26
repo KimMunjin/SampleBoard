@@ -7,7 +7,7 @@ public interface TokenRepository {
 
     public boolean deleteToken(String email);
 
-    public void addBlackListAccessToken(String accessToken);
+    public void addBlackListAccessToken(String jti);
 
-    public boolean existsBlackListAccessToken(String accessToken);
+    public boolean existsBlackListAccessToken(String jti);
 }

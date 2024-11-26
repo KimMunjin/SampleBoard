@@ -41,6 +41,19 @@ public class MemberDto implements UserDetails {
                 .build();
     }
 
+    public static Member toVo(MemberDto memberDto) {
+        return Member.builder()
+                .memberId(memberDto.getMemberId())
+                .email(memberDto.getEmail())
+                .password(memberDto.getPassword())
+                .nickname(memberDto.getNickname())
+                .createdAt(memberDto.getCreatedAt())
+                .updatedAt(memberDto.getUpdatedAt())
+                .lastLoginAt(memberDto.getLastLoginAt())
+                .role(memberDto.getRole())
+                .build();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<GrantedAuthority> authorities = new ArrayList<>();

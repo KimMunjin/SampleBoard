@@ -23,8 +23,6 @@ public class TokenConstant {
 
     public static final String BLACK_LIST = "BlackList";
 
-    public static final String LOGOUT_NOT_SUCCESSFUL = "이미 로그아웃이 되었습니다";
-
     public static final String LOGOUT_SUCCESSFUL = "로그아웃이 정상적으로 진행되었습니다.";
 
     public static final String JTI_CLAIM_NAME = "jti";

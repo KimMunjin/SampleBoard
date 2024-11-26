@@ -6,6 +6,7 @@ import com.hk.sampleboard.domain.member.dto.MemberResponse;
 import com.hk.sampleboard.domain.member.dto.RegistMemberDto;
 import com.hk.sampleboard.domain.member.mapper.MemberMapper;
 import com.hk.sampleboard.domain.member.vo.Member;
+import com.hk.sampleboard.global.constant.ResponseConstant;
 import com.hk.sampleboard.global.exception.ErrorCode;
 import com.hk.sampleboard.global.exception.MemberException;
 import com.hk.sampleboard.global.security.SecurityService;
@@ -20,7 +21,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,12 +68,12 @@ class MemberServiceImplTest {
                     .nickname(nickname)
                     .build();
 
-            Member member = member(request.getEmail(),encodedPassword,request.getNickname(),Role.USER);
+            Member member = member(request.getEmail(),encodedPassword, request.getNickname(),Role.USER);
 
             when(memberMapper.existEmail(anyString())).thenReturn(false);
             when(memberMapper.existNickname(anyString())).thenReturn(false);
             when(passwordEncoder.encode(password)).thenReturn(encodedPassword);
-            when(memberMapper.save(member)).thenReturn(1);
+            when(memberMapper.insertMember(any(Member.class))).thenReturn(member);
 
             // when
             RegistMemberDto.Response response = memberService.registMember(request);
@@ -82,8 +82,8 @@ class MemberServiceImplTest {
             assertNotNull(response);
             assertThat(response.getEmail()).isEqualTo(member.getEmail());
             assertThat(response.getNickname()).isEqualTo(member.getNickname());
-            assertEquals("회원가입성공", response.getMessage());
-            verify(memberMapper, times(1)).save(member);
+            assertEquals(ResponseConstant.JOIN_SUCCESS, response.getMessage());
+            verify(memberMapper, times(1)).insertMember(member);
         }
         @Test
         @DisplayName("회원가입 실패 - 이메일 중복")
@@ -103,7 +103,7 @@ class MemberServiceImplTest {
             MemberException memberException = catchThrowableOfType(()->memberService.registMember(request),MemberException.class);
 
             assertEquals(ErrorCode.EMAIL_ALREADY_EXIST, memberException.getErrorCode());
-            verify(memberMapper, never()).save(any(Member.class));
+            verify(memberMapper, never()).insertMember(any(Member.class));
         }
         @Test
         @DisplayName("회원가입 실패 - 닉네임 중복")
@@ -123,7 +123,7 @@ class MemberServiceImplTest {
             MemberException memberException = catchThrowableOfType(()->memberService.registMember(request),MemberException.class);
 
             assertEquals(ErrorCode.NICKNAME_ALREADY_EXIST, memberException.getErrorCode());
-            verify(memberMapper, never()).save(any(Member.class));
+            verify(memberMapper, never()).insertMember(any(Member.class));
         }
     }
     @Nested
@@ -143,13 +143,13 @@ class MemberServiceImplTest {
                     .password(rawPassword)
                     .build();
 
-            Member member = member(email, encodedPassword, nickname, Role.USER);  // 헬퍼 메서드 사용
+            Member member = member(request.getEmail(), encodedPassword, nickname, Role.USER);
             MemberDto memberDto = MemberDto.fromVo(member);
 
             when(securityService.loadUserByUsername(email)).thenReturn(memberDto);
             when(passwordEncoder.matches(rawPassword, encodedPassword)).thenReturn(true);
             when(memberMapper.findByEmail(email)).thenReturn(Optional.of(member));
-            when(memberMapper.update(any(Member.class))).thenReturn(1);
+            when(memberMapper.updateMember(any(Member.class))).thenReturn(member);
 
             // when
             MemberResponse response = memberService.loginMember(request);
@@ -158,8 +158,7 @@ class MemberServiceImplTest {
             assertNotNull(response);
             assertEquals(email, response.getEmail());
             assertNotNull(member.getLastLoginAt());
-            verify(memberMapper).update(argThat(updatedMember ->
-                    updatedMember.getLastLoginAt() != null));
+            verify(memberMapper,times(1)).updateMember(member);
         }
 
         @Test
@@ -180,8 +179,8 @@ class MemberServiceImplTest {
             // when & then
             MemberException memberException = catchThrowableOfType(()->memberService.loginMember(request),MemberException.class);
 
-            assertEquals(ErrorCode.MEMBER_NOT_FOUNT, memberException.getErrorCode());
-            verify(memberMapper, never()).update(any(Member.class));
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, memberException.getErrorCode());
+            verify(memberMapper, never()).updateMember(any(Member.class));
         }
 
         @Test
@@ -209,7 +208,7 @@ class MemberServiceImplTest {
             MemberException memberException = catchThrowableOfType(()->memberService.loginMember(request),MemberException.class);
 
             assertEquals(ErrorCode.INVALID_EMAIL_PASSWORD, memberException.getErrorCode());
-            verify(memberMapper, never()).update(any(Member.class));
+            verify(memberMapper, never()).updateMember(any(Member.class));
         }
 
         @Test
@@ -236,8 +235,8 @@ class MemberServiceImplTest {
             // when & then
             MemberException memberException = catchThrowableOfType(()->memberService.loginMember(request),MemberException.class);
 
-            assertEquals(ErrorCode.MEMBER_NOT_FOUNT, memberException.getErrorCode());
-            verify(memberMapper, never()).update(any(Member.class));
+            assertEquals(ErrorCode.MEMBER_NOT_FOUND, memberException.getErrorCode());
+            verify(memberMapper, never()).updateMember(any(Member.class));
         }
     }
 }

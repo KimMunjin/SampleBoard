@@ -23,17 +23,17 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http.httpBasic(httpBasic->httpBasic.disable())
-                .csrf(csrf->csrf.disable()) //사용자가 csrf 토큰을 제출하면 서버는 제출된 csrf 토큰을 검증하여 신뢰성 확인
+        return http.httpBasic(httpBasic->httpBasic.disable())//기본 HTTP 인증 비활성화
+                .csrf(csrf->csrf.disable()) //사용자가 csrf 토큰을 제출하면 서버는 제출된 csrf 토큰을 검증하여 신뢰성 확인(CSRF 보호 기능은 REST API에서 일반적으로 비활성화)
                 .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //session 방식이 아닌 restApi 방식이기 때문에 STATELESS
                 .authorizeHttpRequests(auth->
                         auth
                                 .requestMatchers("/member/regist").permitAll()
                                 .requestMatchers("/member/login").permitAll()
                                 .requestMatchers("/member/login/reissue").permitAll()
-                                .anyRequest().authenticated()
+                                .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
                 )
-                .addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(this.jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class) //jwt 인증 필터를 UsernamePasswordAuthenticationFilter 이전에 추가
                 .build();
                 //권한 설정 hasRole()은 @EnableMethodSecurity를 통해 어노테이션으로 처리
     }
@@ -41,7 +41,7 @@ public class SecurityConfig {
     @Bean
     public WebSecurityCustomizer configure() {
         return (web -> web.ignoring()
-                .requestMatchers("/swagger-ui/**")
-                .requestMatchers("/v3/api-docs/**"));
+                .requestMatchers("/swagger-ui/**") //Swagger 관련 문서 보안검사 제외
+                .requestMatchers("/v3/api-docs/**")); //Swagger 관련 문서 보안검사 제외
     }
 }

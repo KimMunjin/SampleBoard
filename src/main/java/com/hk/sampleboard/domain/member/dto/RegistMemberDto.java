@@ -2,6 +2,7 @@ package com.hk.sampleboard.domain.member.dto;
 
 import com.hk.sampleboard.domain.member.vo.Member;
 import com.hk.sampleboard.global.annotation.Email;
+import com.hk.sampleboard.global.constant.ResponseConstant;
 import com.hk.sampleboard.global.type.Role;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -16,14 +17,14 @@ public class RegistMemberDto {
     @AllArgsConstructor
     @Builder
     public static class Request {
-        @NotBlank(message = "이메일은 필수 입력 사항입니다.")
-        @Email(message = "유효한 이메일 주소를 입력하세요.")
+        @NotBlank(message = ResponseConstant.EMAIL_NECESSARY)
+        @Email(message = ResponseConstant.EMIAL_NOT_VALID)
         private String email;
 
-        @NotBlank(message = "비밀번호는 필수 입력 사항입니다.")
+        @NotBlank(message = ResponseConstant.PASSWORD_NECESSARY)
         private String password;
 
-        @NotBlank(message = "닉네임은 필수 입력 사항입니다.")
+        @NotBlank(message = ResponseConstant.NICKNAME_NECESSARY)
         private String nickname;
 
         public static Member toVo (RegistMemberDto.Request request) {
@@ -48,12 +49,12 @@ public class RegistMemberDto {
         private String nickname;
         private String message;
 
-        public static RegistMemberDto.Response createRegistResponse(Member member) {
+        public static RegistMemberDto.Response createRegistResponse(MemberDto member) {
             return Response.builder()
                     .memberId(member.getMemberId())
                     .email(member.getEmail())
                     .nickname(member.getNickname())
-                    .message("회원가입성공")
+                    .message(ResponseConstant.JOIN_SUCCESS)
                     .build();
         }
     }

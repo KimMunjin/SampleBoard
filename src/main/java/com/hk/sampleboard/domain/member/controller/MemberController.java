@@ -28,6 +28,7 @@ public class MemberController {
 
     /**
      * 회원가입
+     *
      * @param request
      * @return
      */
@@ -44,6 +45,7 @@ public class MemberController {
 
     /**
      * 로그인
+     *
      * @param request
      * @param httpServletResponse
      * @return
@@ -68,6 +70,7 @@ public class MemberController {
     
     /**
      * 토큰 재발급
+     *
      * access token이 만료될 때에, refresh token을 확인하고, access token과 refresh token을 재발급해준다
      * @param refreshToken
      * @param response
@@ -75,6 +78,7 @@ public class MemberController {
      */
     @PostMapping("/login/reissue")
     @Operation(summary = "Access token 재발급하기", description = "refresh token 확인 후, Access token 재발급하기")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
     public ResponseEntity<TokenDto> reissueAccessToken(
             @RequestHeader("RefreshToken") String refreshToken,
             HttpServletResponse response
@@ -88,25 +92,36 @@ public class MemberController {
 
     /**
      * 로그아웃 http://localhost:8080/member/logout
+     *
+     * @param memberDto
+     * @param accessToken
+     * @param httpServletResponse
+     * @return
      */
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "refreshToken을 삭제하고, access token을 blackList로 돌린다")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
-    public ResponseEntity<String> memberLogout(
+    public ResponseEntity<LogoutMemberDto.Response> memberLogout(
             @AuthenticationPrincipal MemberDto memberDto,
             @RequestHeader("Authorization") String accessToken,
             HttpServletResponse httpServletResponse
     ) {
         log.info("로그아웃 요청 : memberId = {}", memberDto.getMemberId());
         String token = tokenProvider.resolveTokenFromRequest(accessToken);
-
+        LogoutMemberDto.Request request = LogoutMemberDto.Request.builder()
+                .memberId(memberDto.getMemberId())
+                .token(token)
+                .email(memberDto.getEmail())
+                .build();
         cookieService.expireCookieForLogout(httpServletResponse);
-        log.info("로그아웃 완료 : memberId = {}", memberDto.getMemberId());
-        return ResponseEntity.ok(memberService.logoutMember(token, memberDto.getEmail()));
+        LogoutMemberDto.Response response = memberService.logoutMember(request);
+        log.info("로그아웃 완료 : memberId = {}", response.getMemberId());
+        return ResponseEntity.ok(response);
     }
 
     /**
      * 회원 정보 수정
+     *
      * @param request
      * @param memberDto
      * @return
@@ -122,10 +137,19 @@ public class MemberController {
         if (!memberDto.getMemberId().equals(request.getMemberId())) {
             throw new MemberException(ErrorCode.NO_AUTHORITY_ERROR);
         }
-
-        return ResponseEntity.ok(memberService.updateMember(request));
+        UpdateMemberDto.Response response = memberService.updateMember(request);
+        log.info("회원정보수정 완료 : memberId = {}", response.getMemberId());
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * 회원 탈퇴
+     *
+     * @param memberDto
+     * @param accessToken
+     * @param request
+     * @return
+     */
     @PostMapping("/delete")
     @Operation(summary = "회원 탈퇴", description = "회원 탈퇴 처리를 합니다.")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")

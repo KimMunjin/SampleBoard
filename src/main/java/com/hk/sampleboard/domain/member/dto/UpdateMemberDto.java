@@ -2,6 +2,7 @@ package com.hk.sampleboard.domain.member.dto;
 
 import com.hk.sampleboard.domain.member.vo.Member;
 import com.hk.sampleboard.global.annotation.Email;
+import com.hk.sampleboard.global.constant.ResponseConstant;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
@@ -32,15 +33,17 @@ public class UpdateMemberDto {
     @AllArgsConstructor
     @Builder
     public static class Response {
+        private Long memberId;
         private String email;
         private String nickname;
         private String message;
 
-        public static Response from(Member member) {
+        public static Response from(MemberDto member) {
             return Response.builder()
+                    .memberId(member.getMemberId())
                     .email(member.getEmail())
                     .nickname(member.getNickname())
-                    .message("회원정보가 성공적으로 수정되었습니다.")
+                    .message(ResponseConstant.UPDATE_MEMBER_SUCCESS)
                     .build();
         }
     }

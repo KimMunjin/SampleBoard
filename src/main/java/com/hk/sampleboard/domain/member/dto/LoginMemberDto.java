@@ -1,5 +1,7 @@
 package com.hk.sampleboard.domain.member.dto;
 
+import com.hk.sampleboard.global.annotation.Email;
+import com.hk.sampleboard.global.constant.ResponseConstant;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
@@ -11,9 +13,12 @@ public class LoginMemberDto {
     @AllArgsConstructor
     @Builder
     public static class Request{
-        @NotBlank(message = "이메일은 필수 입력 사항입니다.")
+
+        @NotBlank(message = ResponseConstant.EMAIL_NECESSARY)
+        @Email(message = ResponseConstant.EMIAL_NOT_VALID)
         private String email;
-        @NotBlank(message = "비밀번호는 필수 입력 사항입니다.")
+
+        @NotBlank(message = ResponseConstant.PASSWORD_NECESSARY)
         private String password;
     }
 

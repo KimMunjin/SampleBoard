@@ -33,9 +33,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if(StringUtils.hasText(token)) {
             //토큰이 blacklist에 있는지 확인
             String jti = tokenProvider.getTokenJti(token);
-            if(tokenRepository.existsBlackListAccessToken(token)) {
+            if(tokenRepository.existsBlackListAccessToken(jti)) {
                 //blacklist에 있으면 로그아웃 된 토큰이니 인증 거부
-                filterChain.doFilter(request, response);
+                filterChain.doFilter(request, response); //필터 체인에서 다음 필터를 호출하거나, 마지막 필터인 경우 대상 서블릿 호출
                 return;
             }
             //유효한 토큰이면 인증 처리
