@@ -32,5 +32,5 @@ Controller - Service - ServiceImpl - Mapper
 - [ ] 초기 목표였던 게시판 기능 완성 
 - [x] **GlobalExceptionHandler** 완성
 - [ ] **Mockito**를 활용한 `ServiceImpl` 테스트 코드 작성
-- [ ] 구체적인 주석 추가
-- [ ]  필요한 부분 리팩토링 작업
+- [x] 구체적인 주석 추가
+- [ ] 필요한 부분 리팩토링 작업
